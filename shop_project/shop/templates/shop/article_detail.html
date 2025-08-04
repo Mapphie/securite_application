@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            {% if article.image %}
+                <img src="{{ article.image.url }}" class="card-img-top">
+            {% endif %}
+            <div class="card-body">
+                <h1 class="card-title">{{ article.titre }}</h1>
+                <p class="card-text">{{ article.description }}</p>
+                <h3 class="text-success">{{ article.prix }}€</h3>
+                <p class="text-muted">Publié par {{ article.auteur.username }} le {{ article.date_creation|date:"d/m/Y" }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="xss-demo">
+            <h5>🔓 Zone vulnérable XSS</h5>
+            <p>Les commentaires ci-dessous ne sont pas filtrés !</p>
+            <button onclick="showCookies()" class="btn btn-sm btn-warning">Voir cookies</button>
+        </div>
+    </div>
+</div>
+
+<!-- Section Commentaires - VULNÉRABLE AUX XSS -->
+<div class="row mt-4">
+    <div class="col-12">
+        <h3>Commentaires ({{ commentaires.count }})</h3>
+        
+        {% if user.is_authenticated %}
+            <form method="POST" action="{% url 'add_comment' article.id %}" class="mb-4">
+                <div class="mb-3">
+                    <label for="contenu" class="form-label">Votre commentaire :</label>
+                    <textarea class="form-control" name="contenu" id="contenu" rows="3" required></textarea>
+                    <div class="form-text text-danger">
+                        ⚠️ Zone vulnérable : HTML non échappé !
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Publier</button>
+            </form>
+        {% else %}
+            <p><a href="{% url 'login' %}">Connectez-vous</a> pour laisser un commentaire.</p>
+        {% endif %}
+        
+        <!-- Affichage des commentaires - VULNÉRABILITÉ XSS ICI -->
+        {% for commentaire in commentaires %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <h6 class="card-subtitle mb-2 text-muted">{{ commentaire.auteur.username }}</h6>
+                        <small class="text-muted">{{ commentaire.date_creation|date:"d/m/Y H:i" }}</small>
+                    </div>
+                    <!-- VULNÉRABILITÉ CRITIQUE : Contenu non échappé -->
+                    <p class="card-text">{{ commentaire.contenu }}</p>
+                </div>
+            </div>
+        {% empty %}
+            <p class="text-muted">Aucun commentaire pour le moment.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

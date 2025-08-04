@@ -1,0 +1,63 @@
+# Environnement virtuel
+venv/
+ENV/
+env/
+*.pyc
+__pycache__/
+
+# Django migrations
+*/migrations/
+!*/migrations/__init__.py
+
+# Bases de données SQLite
+*.sqlite3
+*.db
+
+# Fichiers sensibles
+.env
+.env.*
+
+# Paramètres de l'IDE
+.vscode/
+.idea/
+*.swp
+
+# Dossiers de déploiement
+staticfiles/
+static/
+media/
+
+# Fichiers de logs
+*.log
+
+# Cache Python
+*.pyo
+*.pyd
+*.pdb
+
+# Fichiers temporaires
+*.bak
+*.tmp
+*.~ 
+.DS_Store
+Thumbs.db
+
+# Coverage
+htmlcov/
+.coverage
+.tox/
+nosetests.xml
+coverage.xml
+
+# Pytest
+.pytest_cache/
+
+# MyPy
+.mypy_cache/
+
+# Docker (si utilisé)
+*.pid
+docker-compose.override.yml
+
+# Local SQLite backups
+*.sqlite3-journal

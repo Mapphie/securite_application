@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1>Bienvenue sur XSS Shop</h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <h2>Articles récents</h2>
+    </div>
+</div>
+
+<div class="row">
+    {% for article in articles %}
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                {% if article.image %}
+                    <img src="{{ article.image.url }}" class="card-img-top" style="height: 200px; object-fit: cover;">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ article.titre }}</h5>
+                    <p class="card-text">{{ article.description|truncatewords:20 }}</p>
+                    <p class="text-success">{{ article.prix }}€</p>
+                    <a href="{% url 'article_detail' article.id %}" class="btn btn-primary">Voir détails</a>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

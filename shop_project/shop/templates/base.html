@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}XSS Shop - Boutique Vulnérable{% endblock %}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+
+        .xss-demo {
+            border: 2px dashed #e74c3c;
+            padding: 15px;
+            margin: 10px 0;
+            background-color: #fdf2f2;
+        }
+    </style>
+</head>
+<body>
+
+    
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'home' %}">XSS Shop</a>
+            
+            <div class="navbar-nav ms-auto">
+                {% if user.is_authenticated %}
+                    <span class="navbar-text me-3">Bonjour, {{ user.username }}</span>
+                    <a class="nav-link" href="{% url 'create_article' %}">Créer un article</a>
+                    <a class="nav-link" href="{% url 'logout' %}">Déconnexion</a>
+                {% else %}
+                    <a class="nav-link" href="{% url 'login' %}">Connexion</a>
+                    <a class="nav-link" href="{% url 'register' %}">Inscription</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Zone de recherche vulnérable -->
+        <div class="row mb-4">
+            <div class="col-md-6 offset-md-3">
+                <form method="GET" action="{% url 'search' %}">
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="q" placeholder="Rechercher des articles...">
+                        <button class="btn btn-outline-secondary" type="submit">Rechercher</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        {% block content %}
+        {% endblock %}
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Script pour démontrer le vol de cookies -->
+    <script>
+        // Fonction utilitaire pour voir les cookies (pour le TP)
+        function showCookies() {
+            alert('Cookies actuels: ' + document.cookie);
+        }
+        
+        // Log des événements pour détecter les XSS
+        window.addEventListener('error', function(e) {
+            console.log('Erreur JS détectée:', e.message);
+        });
+    </script>
+</body>
+</html>

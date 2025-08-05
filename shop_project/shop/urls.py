@@ -9,5 +9,5 @@ urlpatterns = [
     path('article/<int:article_id>/', views.article_detail, name='article_detail'),
     path('article/<int:article_id>/comment/', views.add_comment, name='add_comment'),
     path('create-article/', views.create_article, name='create_article'),
-    path('search/', views.vulnerable_search, name='search'),
+    path('search/', views.secure_search, name='search'),
 ]

@@ -4,7 +4,10 @@
 <div class="row">
     <div class="col-12">
         <!-- VULNÉRABILITÉ XSS : Affichage direct de la requête -->
-        <h2>Résultats pour : {{ query }}</h2>
+        {% comment %} <h2>Résultats pour : {{ query }}</h2> {% endcomment %}
+
+        <!-- ✅ SÉCURISÉ : Affichage échappé de la requête -->
+        <h2>Résultats pour : "{{ query|escape }}"</h2>
         
         <div class="xss-demo">
             <h5>🎯 Test XSS dans la recherche</h5>
@@ -17,7 +20,7 @@
 <div class="row">
     {% for article in articles %}
         <div class="col-md-4 mb-4">
-            <div class="card">
+            {% comment %} <div class="card">
                 {% if article.image %}
                     <img src="{{ article.image.url }}" class="card-img-top" style="height: 200px; object-fit: cover;">
                 {% endif %}
@@ -26,6 +29,20 @@
                     <p class="card-text">{{ article.description|truncatewords:20 }}</p>
                     <p class="text-success">{{ article.prix }}€</p>
                     <a href="{% url 'article_detail' article.id %}" class="btn btn-primary">Voir détails</a>
+                </div>
+            </div> {% endcomment %}
+
+            {% comment %} ---------- SECURISEE ----------- {% endcomment %}
+            <div class="card">
+                {% if article.image %}
+                    <img src="{{ article.image.url }}" class="card-img-top" 
+                         style="height: 200px; object-fit: cover;" alt="{{ article.titre|escape }}">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ article.titre|escape }}</h5>
+                    <p class="card-text">{{ article.description|truncatewords:20|escape }}</p>
+                    <p class="text-success">{{ article.prix }}€</p>
+                    <a href="{% url 'article_detail' article.id %}" class="btn btn-success">Voir détails</a>
                 </div>
             </div>
         </div>

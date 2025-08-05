@@ -4,11 +4,54 @@ from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
+from django.core.exceptions import ValidationError
+from django.views.decorators.csrf import csrf_protect
+from django.utils.html import escape, strip_tags
 from .models import Article, Commentaire
 import logging
 import re
+import bleach
 
 logger = logging.getLogger('xss_detection')
+
+def sanitize_content(content):
+    """Nettoie et valide le contenu utilisateur"""
+    
+    # Étape 1: Supprimer les balises dangereuses
+    allowed_tags = ['p', 'br', 'strong', 'em', 'u', 'i', 'b']  # Tags autorisés
+    allowed_attributes = {}  # Aucun attribut autorisé
+    
+    # Utiliser bleach pour nettoyer le HTML
+    cleaned_content = bleach.clean(
+        content,
+        tags=allowed_tags,
+        attributes=allowed_attributes,
+        strip=True
+    )
+    
+    # Étape 2: Vérifications supplémentaires
+    dangerous_patterns = [
+        r'javascript:',
+        r'on\w+\s*=',
+        r'<script',
+        r'</script>',
+        r'eval\(',
+        r'alert\(',
+        r'document\.',
+        r'window\.',
+    ]
+    
+    for pattern in dangerous_patterns:
+        if re.search(pattern, cleaned_content, re.IGNORECASE):
+            raise ValidationError(f"Contenu suspect détecté: {pattern}")
+    
+    return cleaned_content
+
+def validate_content_length(content, max_length=1000):
+    """Valide la longueur du contenu"""
+    if len(content) > max_length:
+        raise ValidationError(f"Contenu trop long (max {max_length} caractères)")
+    return content
 
 def detect_xss_attempt(content):
     """Détection basique des tentatives XSS pour logging"""
@@ -31,21 +74,42 @@ def home(request):
     articles = Article.objects.all()[:6]
     return render(request, 'shop/home.html', {'articles': articles})
 
+@csrf_protect
 def register_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
         email = request.POST.get('email')
         password = request.POST.get('password')
         
+        # --------- APP VULNERABLE ---------------
+        # if User.objects.filter(username=username).exists():
+        #     messages.error(request, 'Ce nom d\'utilisateur existe déjà')
+        # else:
+        #     user = User.objects.create_user(username=username, email=email, password=password)
+        #     messages.success(request, 'Compte créé avec succès')
+        #     return redirect('login')
+        
+        # --------------- APP SECURISEE -----------------
+        # Validation des données
+        if not username or not email or not password:
+            messages.error(request, 'Tous les champs sont obligatoires')
+            return render(request, 'registration/register.html')
+        
         if User.objects.filter(username=username).exists():
             messages.error(request, 'Ce nom d\'utilisateur existe déjà')
         else:
-            user = User.objects.create_user(username=username, email=email, password=password)
-            messages.success(request, 'Compte créé avec succès')
-            return redirect('login')
+            try:
+                user = User.objects.create_user(username=username, email=email, password=password)
+                messages.success(request, 'Compte créé avec succès')
+                logger.info(f'Nouveau compte créé: {username}')
+                return redirect('login')
+            except Exception as e:
+                logger.error(f'Erreur création compte: {e}')
+                messages.error(request, 'Erreur lors de la création du compte')
     
     return render(request, 'shop/register.html')
 
+@csrf_protect
 def login_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -74,27 +138,58 @@ def article_detail(request, article_id):
     })
 
 @login_required
+@csrf_protect
 def add_comment(request, article_id):
     if request.method == 'POST':
         article = get_object_or_404(Article, id=article_id)
-        contenu = request.POST.get('contenu', '')
+        contenu_brut = request.POST.get('contenu', '')
         
+        # --------- APP VULNERABLE ---------------
         # Log des tentatives XSS détectées
-        if detect_xss_attempt(contenu):
-            logger.info(f"Tentative XSS détectée de {request.user.username}: {contenu}")
+        # if detect_xss_attempt(contenu_brut):
+        #     logger.info(f"Tentative XSS détectée de {request.user.username}: {contenu_brut}")
         
-        # VULNÉRABILITÉ: Pas de validation ni d'échappement du contenu
-        commentaire = Commentaire.objects.create(
-            article=article,
-            auteur=request.user,
-            contenu=contenu  # Contenu non filtré !
-        )
+        # # VULNÉRABILITÉ: Pas de validation ni d'échappement du contenu
+        # commentaire = Commentaire.objects.create(
+        #     article=article,
+        #     auteur=request.user,
+        #     contenu=contenu_brut  # Contenu non filtré !
+        # )
         
-        messages.success(request, 'Commentaire ajouté avec succès')
+        # messages.success(request, 'Commentaire ajouté avec succès')
+        
+        # --------------- APP SECURISEE -----------------
+        try:
+            # ✅ VALIDATION ET NETTOYAGE DU CONTENU
+            contenu_valide = validate_content_length(contenu_brut)
+            contenu_nettoye = sanitize_content(contenu_valide)
+            
+            # Vérification finale
+            if not contenu_nettoye.strip():
+                messages.error(request, 'Le commentaire ne peut pas être vide')
+                return redirect('article_detail', article_id=article_id)
+            
+            # Création du commentaire sécurisé
+            commentaire = Commentaire.objects.create(
+                article=article,
+                auteur=request.user,
+                contenu=contenu_nettoye  # Contenu nettoyé
+            )
+            
+            messages.success(request, 'Commentaire ajouté avec succès')
+            logger.info(f'Commentaire ajouté par {request.user.username} sur article {article_id}')
+            
+        except ValidationError as e:
+            messages.error(request, f'Contenu invalide: {e.message}')
+            logger.warning(f'Tentative XSS bloquée: {request.user.username} - {contenu_brut[:100]}')
+        except Exception as e:
+            messages.error(request, 'Erreur lors de l\'ajout du commentaire')
+            logger.error(f'Erreur ajout commentaire: {e}')
     
     return redirect('article_detail', article_id=article_id)
 
 @login_required
+@csrf_protect
 def create_article(request):
     if request.method == 'POST':
         titre = request.POST.get('titre')
@@ -102,16 +197,47 @@ def create_article(request):
         prix = request.POST.get('prix')
         image = request.FILES.get('image')
         
-        article = Article.objects.create(
-            titre=titre,
-            description=description,
-            prix=prix,
-            image=image,
-            auteur=request.user
-        )
+        # --------- APP VULNERABLE ---------------
+        # article = Article.objects.create(
+        #     titre=titre,
+        #     description=description,
+        #     prix=prix,
+        #     image=image,
+        #     auteur=request.user
+        # )
         
-        messages.success(request, 'Article créé avec succès')
-        return redirect('article_detail', article_id=article.id)
+        # messages.success(request, 'Article créé avec succès')
+        # return redirect('article_detail', article_id=article.id)
+    
+        # --------------- APP SECURISEE -----------------
+        try:
+            # Validation des données
+            if not titre or not description or not prix:
+                messages.error(request, 'Tous les champs sont obligatoires')
+                return render(request, 'shop/create_article.html')
+            
+            prix = float(prix)
+            if prix <= 0:
+                messages.error(request, 'Le prix doit être positif')
+                return render(request, 'shop/create_article.html')
+            
+            article = Article.objects.create(
+                titre=titre,
+                description=description,
+                prix=prix,
+                image=image,
+                auteur=request.user
+            )
+            
+            messages.success(request, 'Article créé avec succès')
+            logger.info(f'Article créé par {request.user.username}: {titre}')
+            return redirect('article_detail', article_id=article.id)
+            
+        except ValueError:
+            messages.error(request, 'Prix invalide')
+        except Exception as e:
+            messages.error(request, 'Erreur lors de la création de l\'article')
+            logger.error(f'Erreur création article: {e}')
     
     return render(request, 'shop/create_article.html')
 
@@ -128,5 +254,25 @@ def vulnerable_search(request):
     # VULNÉRABILITÉ: Affichage direct de la requête sans échappement
     return render(request, 'shop/search.html', {
         'query': query,  # Non échappé !
+        'articles': articles
+    })
+    
+def secure_search(request):
+    """Version sécurisée de la recherche"""
+    query = request.GET.get('q', '')
+    
+    # ✅ NETTOYAGE DE LA REQUÊTE
+    if query:
+        query = escape(query)  # Échappement HTML
+        query = query[:100]    # Limitation de longueur
+        
+        # Log des recherches suspectes
+        if any(pattern in query.lower() for pattern in ['<script', 'javascript:', 'onerror']):
+            logger.warning(f'Recherche suspecte: {request.user} - {query}')
+    
+    articles = Article.objects.filter(titre__icontains=query) if query else []
+    
+    return render(request, 'shop/secure_search.html', {
+        'query': query,  # Maintenant échappé
         'articles': articles
     })

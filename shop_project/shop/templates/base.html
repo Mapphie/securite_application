@@ -24,7 +24,8 @@
             
             <div class="navbar-nav ms-auto">
                 {% if user.is_authenticated %}
-                    <span class="navbar-text me-3">Bonjour, {{ user.username }}</span>
+                    {% comment %} APP VULNERABLE <span class="navbar-text me-3">Bonjour, {{ user.username }}</span> {% endcomment %}
+                    <span class="navbar-text me-3">Bonjour, {{ user.username|escape }}</span>
                     <a class="nav-link" href="{% url 'create_article' %}">Créer un article</a>
                     <a class="nav-link" href="{% url 'logout' %}">Déconnexion</a>
                 {% else %}
@@ -37,7 +38,7 @@
 
     <div class="container mt-4">
         <!-- Zone de recherche vulnérable -->
-        <div class="row mb-4">
+        {% comment %} <div class="row mb-4">
             <div class="col-md-6 offset-md-3">
                 <form method="GET" action="{% url 'search' %}">
                     <div class="input-group">
@@ -52,6 +53,32 @@
             {% for message in messages %}
                 <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
                     {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        {% block content %}
+        {% endblock %} {% endcomment %}
+
+        <!-- Zone de recherche sécurisée -->
+        <div class="row mb-4">
+            <div class="col-md-6 offset-md-3">
+                <form method="GET" action="{% url 'search' %}">
+                    {% csrf_token %}
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="q" 
+                               placeholder="Rechercher des articles..." maxlength="100">
+                        <button class="btn btn-outline-success" type="submit">🔍 Rechercher</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                    {{ message|escape }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             {% endfor %}
@@ -74,6 +101,24 @@
         window.addEventListener('error', function(e) {
             console.log('Erreur JS détectée:', e.message);
         });
+    </script>
+
+    <!-- ✅ Scripts inline bloqués par CSP - utilisez des fichiers externes -->
+    <script>
+        // Ce script sera bloqué par CSP si 'unsafe-inline' n'est pas autorisé
+        console.log('Script de sécurité chargé');
+        
+        // Fonction pour tester CSP
+        function testCSP() {
+            try {
+                eval('console.log("eval bloqué par CSP")');
+            } catch(e) {
+                console.log('✅ eval() bloqué par CSP:', e.message);
+            }
+        }
+        
+        // Test au chargement
+        document.addEventListener('DOMContentLoaded', testCSP);
     </script>
 </body>
 </html>

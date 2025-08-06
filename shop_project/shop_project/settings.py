@@ -44,10 +44,10 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # 'django.middleware.csrf.CsrfViewMiddleware', désactivé pour faciliter les tests XSS
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
 ROOT_URLCONF = 'shop_project.urls'
@@ -84,6 +84,29 @@ DATABASES = {
         'PORT': '5432',
     }
 }
+
+# ✅ CONFIGURATION DES COOKIES SÉCURISÉS
+SESSION_COOKIE_HTTPONLY = True      # Empêche l'accès JavaScript aux cookies de session
+SESSION_COOKIE_SECURE = False       # True en HTTPS uniquement
+SESSION_COOKIE_SAMESITE = 'Lax'     # Protection CSRF supplémentaire
+
+CSRF_COOKIE_HTTPONLY = True         # Empêche l'accès JavaScript au token CSRF
+CSRF_COOKIE_SECURE = False          # True en HTTPS uniquement
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+# ✅ EN-TÊTES DE SÉCURITÉ
+SECURE_BROWSER_XSS_FILTER = True    # Active le filtre XSS du navigateur
+SECURE_CONTENT_TYPE_NOSNIFF = True  # Empêche le MIME-type sniffing
+X_FRAME_OPTIONS = 'DENY'            # Empêche l'inclusion en iframe
+
+# ✅ CONTENT SECURITY POLICY
+CSP_DEFAULT_SRC = "'self'"
+CSP_SCRIPT_SRC = "'self'"           # Seuls les scripts du même domaine
+CSP_STYLE_SRC = "'self' 'unsafe-inline' https://cdnjs.cloudflare.com"
+CSP_IMG_SRC = "'self' data:"
+CSP_FONT_SRC = "'self' https://cdnjs.cloudflare.com"
+CSP_CONNECT_SRC = "'self'"
+CSP_FRAME_ANCESTORS = "'none'"       # Équivalent à X-Frame-Options: DENY
 
 
 # Password validation
@@ -149,6 +172,31 @@ LOGGING = {
     'loggers': {
         'xss_detection': {
             'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}
+
+
+# Logging des violations CSP
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': 'security.log',
+        },
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'security': {
+            'handlers': ['file', 'console'],
             'level': 'INFO',
             'propagate': True,
         },

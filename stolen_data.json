@@ -1,0 +1,18 @@
+[
+  {
+    "timestamp": "2025-08-05 13:58:42",
+    "ip": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+    "referer": "Unknown",
+    "cookies": "csrftoken=FI3bIWMrtDSkq5AaLnjgy0jHPSIZ4pQh; sessionid=38njgonk8q9v7tat8kf770s9brmngv95",
+    "extra_data": "Aucune"
+  },
+  {
+    "timestamp": "2025-08-05 13:59:10",
+    "ip": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+    "referer": "Unknown",
+    "cookies": "csrftoken=FI3bIWMrtDSkq5AaLnjgy0jHPSIZ4pQh; sessionid=x51askkewwzxtr0yx7gdw2v4o5u9s1f8",
+    "extra_data": "Aucune"
+  }
+]

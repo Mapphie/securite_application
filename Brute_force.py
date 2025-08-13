@@ -136,7 +136,7 @@ def main():
 
     
     # Liste des utilisateurs à tester
-    usernames = ["alice"]
+    usernames = ["maphie"]
     
     for username in usernames:
         print(f"\n Test de l'utilisateur: {username}")

@@ -1,3 +1,4 @@
+from collections import defaultdict
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
@@ -8,6 +9,7 @@ from django.core.exceptions import ValidationError
 from django.views.decorators.csrf import csrf_protect
 from django.utils.html import escape, strip_tags
 from .models import Article, Commentaire
+import time
 import logging
 import re
 import bleach
@@ -109,18 +111,58 @@ def register_view(request):
     
     return render(request, 'shop/register.html')
 
+# @csrf_protect
+# def login_view(request):
+#     if request.method == 'POST':
+#         username = request.POST.get('username')
+#         password = request.POST.get('password')
+        
+#         user = authenticate(request, username=username, password=password)
+#         if user:
+#             login(request, user)
+#             return redirect('home')
+#         else:
+#             messages.error(request, 'Identifiants incorrects')
+    
+#     return render(request, 'shop/login.html')
+
+# LOGIN SECURISER PAR RAPPORT A UNE ATTAQUE PAR BRUTE FORCE
 @csrf_protect
 def login_view(request):
     if request.method == 'POST':
+        client_ip = get_client_ip(request)
+        
+        # Vérifier si l'IP est bloquée
+        if is_ip_blocked(client_ip):
+            logger.warning(f'Tentative de connexion depuis IP bloquée: {client_ip}')
+            messages.error(request, 'Votre adresse IP a été temporairement bloquée suite à de multiples tentatives échouées.')
+            return render(request, 'shop/login.html')
+        
+        # Vérifier les limites de taux
+        if not check_rate_limit(client_ip):
+            logger.warning(f'Limite de taux dépassée pour IP: {client_ip}')
+            messages.error(request, 'Trop de tentatives de connexion. Votre IP a été bloquée.')
+            return render(request, 'shop/login.html')
+        
         username = request.POST.get('username')
         password = request.POST.get('password')
         
+        logger.info(f'Tentative de connexion - Username: {username}, IP: {client_ip}')
+        
         user = authenticate(request, username=username, password=password)
+        
         if user:
             login(request, user)
+            logger.info(f'Connexion réussie - Username: {username}, IP: {client_ip}')
+            login_attempts[client_ip]['count'] = 0  # Réinitialiser le compteur
             return redirect('home')
         else:
-            messages.error(request, 'Identifiants incorrects')
+            # Incrémenter le compteur de tentatives échouées
+            login_attempts[client_ip]['count'] += 1
+            login_attempts[client_ip]['last_attempt'] = time.time()
+            
+            logger.warning(f'Échec de connexion - Username: {username}, IP: {client_ip}, Tentatives: {login_attempts[client_ip]["count"]}')
+            messages.error(request,'Nom d\'utilisateur ou mot de passe incorrect.')
     
     return render(request, 'shop/login.html')
 
@@ -276,3 +318,37 @@ def secure_search(request):
         'query': query,  # Maintenant échappé
         'articles': articles
     })
+
+# Mesures de sécurités pour les attaques par brute force
+
+# Tracking des tentatives de connexion pour la protection brute force
+login_attempts = defaultdict(lambda: {'count': 0, 'last_attempt': 0})
+blocked_ips = set()
+
+def get_client_ip(request):
+    """Récupère l'IP réelle du client"""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
+def is_ip_blocked(ip):
+    return ip in blocked_ips
+
+def check_rate_limit(ip):
+    """Vérifie les limites de tentatives de connexion"""
+    current_time = time.time()
+    
+    # Si l'IP a fait plus de 5 tentatives dans les 15 dernières minutes
+    if (login_attempts[ip]['count'] >= 5 and 
+        current_time - login_attempts[ip]['last_attempt'] < 900):
+        blocked_ips.add(ip)
+        return False
+    
+    # Réinitialiser le compteur si plus de 15 minutes se sont écoulées
+    if current_time - login_attempts[ip]['last_attempt'] > 900:
+        login_attempts[ip]['count'] = 0
+    
+    return True

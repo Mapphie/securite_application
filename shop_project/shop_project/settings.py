@@ -90,7 +90,7 @@ SESSION_COOKIE_HTTPONLY = True      # Empêche l'accès JavaScript aux cookies d
 SESSION_COOKIE_SECURE = False       # True en HTTPS uniquement
 SESSION_COOKIE_SAMESITE = 'Lax'     # Protection CSRF supplémentaire
 
-CSRF_COOKIE_HTTPONLY = True         # Empêche l'accès JavaScript au token CSRF
+CSRF_COOKIE_HTTPONLY = False         # Empêche l'accès JavaScript au token CSRF
 CSRF_COOKIE_SECURE = False          # True en HTTPS uniquement
 CSRF_COOKIE_SAMESITE = 'Lax'
 
